@@ -1,192 +1,171 @@
-# Shadow Orb Battle Royale
+# Shadow Orb - Professional Arcade Battle Royale
 
-## Overview
+## Project Overview
+Shadow Orb is a professional arcade-style battle royale mobile game built with React Native and Expo. The game features 6 unique warrior classes, projectile-based combat, strategic gameplay on a large 2400x2400 battlefield, and a vibrant neon arcade aesthetic optimized for landscape mobile play.
 
-Shadow Orb is a mobile battle royale game built with React Native and Expo. Players compete in 10-player matches where they collect shadow orbs and deposit them at designated pillars while avoiding elimination. The game features real-time movement controls via a virtual joystick, a circular arena with strategic pillar placement, and multiple victory conditions (successful orb deposit or last player standing).
+## Game Features
+
+### Core Gameplay
+- **10-player battle royale** with last player standing victory
+- **Shadow Orb collection** mechanic - collect orbs from pillars to win
+- **Large battlefield**: 2400x2400 map with 30+ strategic obstacles
+- **Time-limited matches**: 2-minute rounds with time-based victory conditions
+- **Landscape orientation** locked for optimal mobile gameplay
+
+### Warrior System (6 Unique Classes)
+1. **Berserker** - High damage, aggressive melee fighter
+   - Health: 120 | Defense: 3 | Speed: 3.5
+   - Abilities: Blood Rage, Cleave, War Cry
+   
+2. **Assassin** - Fast, high burst damage, low defense
+   - Health: 90 | Defense: 1 | Speed: 4.5
+   - Abilities: Shadow Strike, Poison Dart, Smoke Bomb
+   
+3. **Tank** - Maximum defense, slow but durable
+   - Health: 180 | Defense: 8 | Speed: 2.8
+   - Abilities: Shield Bash, Fortify, Taunt
+   
+4. **Mage** - Long range, powerful magic attacks
+   - Health: 100 | Defense: 2 | Speed: 3.2
+   - Abilities: Fireball, Ice Shard, Lightning Bolt
+   
+5. **Archer** - Balanced ranged attacker
+   - Health: 110 | Defense: 3 | Speed: 3.8
+   - Abilities: Rapid Shot, Power Shot, Volley
+   
+6. **Paladin** - Balanced fighter with support abilities
+   - Health: 140 | Defense: 6 | Speed: 3.0
+   - Abilities: Holy Strike, Divine Shield, Healing Light
+
+### Combat System
+- **3 unique abilities per warrior** with different damage, range, and cooldowns
+- **Projectile-based attacks** with realistic trajectory physics
+- **Defense-based damage reduction** for strategic depth
+- **Cooldown timers** (5-15 seconds) for ability balance
+- **Visual feedback**: damage numbers, projectile animations, glow effects
+- **Obstacle collision**: projectiles blocked by walls and barriers
+
+### AI System
+- **9 AI opponents** using different warrior classes for variety
+- **Warrior-specific movement speeds** for realistic gameplay
+- **Smart pathfinding** around obstacles
+- **Orb collection** and pillar targeting behavior
+- **Varied combat styles** based on warrior class
+
+### Visual Design (Arcade Art Style)
+- **Neon color palette** with vibrant hues and glow effects
+- **Gradient backgrounds** (purple to blue theme)
+- **Shadow and depth effects** on all UI elements
+- **Animated projectiles** with warrior-specific colors
+- **Floating damage numbers** with fade-out animations
+- **Glowing attack buttons** with cooldown overlays
+- **Character-centered home screen** with battle button in corner
+
+## Technical Architecture
+
+### Project Structure
+```
+/utils
+  - warriors.ts          # 6 warrior class definitions
+  - gameLogic.ts         # Core game mechanics
+  - constants.ts         # Game configuration
+/screens
+  - HomeScreen.tsx       # Arcade-style main menu
+  - WarriorSelectScreen.tsx  # Character selection
+  - GameScreen.tsx       # Main battle arena
+/components
+  - AttackButton.tsx     # Ability buttons with cooldowns
+  - HealthBar.tsx        # Health display
+/navigation
+  - RootStackNavigator.tsx  # Screen navigation
+```
+
+### Key Technologies
+- **React Native** with Expo SDK 54
+- **TypeScript** for type safety
+- **React Navigation** for screen flow
+- **Expo Linear Gradient** for visual effects
+- **Interval-based game loops** for smooth gameplay
+
+### Performance Optimizations
+- **Ref-based state management** in game loops to prevent re-initialization
+- **Efficient collision detection** with distance calculations
+- **Optimized rendering** with conditional visibility
+- **Obstacle caching** in refs for fast access
+
+## Game Mechanics
+
+### Victory Conditions
+1. **Last Player Standing** - Eliminate all opponents
+2. **Time Victory** - Most orbs collected when time expires
+3. **Orb Completion** - Collect orbs from all 5 pillars
+
+### Combat Balance
+- **Damage range**: 15-60 per ability
+- **Health range**: 90-180 per warrior
+- **Defense reduction**: 0%-40% damage mitigation
+- **Movement speeds**: 2.8-4.5 units/frame
+- **Cooldowns**: 5-15 seconds per ability
+
+### Map Layout
+- **5 Shadow Orb pillars** strategically placed
+- **30+ obstacles** for cover and tactical positioning
+- **2400x2400 playing field** (3x larger than MVP)
+- **Varied obstacle sizes**: 60-150px for visual interest
+
+## Development Status
+
+### Completed Features ✓
+- [x] 6 unique warrior classes with stats and abilities
+- [x] Warrior selection screen with character preview
+- [x] Arcade-style home screen (horizontal layout, neon design)
+- [x] Expanded 2400x2400 battlefield with 32+ obstacles
+- [x] Attack system with 3 abilities per warrior
+- [x] Projectile trajectories with physics and collision
+- [x] Cooldown system with visual UI feedback
+- [x] Defense-based damage calculations
+- [x] Warrior-specific movement speeds
+- [x] Visual effects (damage numbers, projectile glows)
+- [x] AI diversity (each AI uses different warrior class)
+- [x] Landscape orientation lock for mobile
+- [x] Full arcade art style implementation
+
+### Pending Features
+- [ ] 3D/isometric rendering with depth
+- [ ] Progress tracking (kills, damage, accuracy)
+- [ ] Advanced AI attack patterns
+
+## Recent Changes (November 19, 2025)
+
+### Attack System Integration
+- Added attack buttons to game HUD with cooldown display
+- Integrated handleAbilityUse for creating projectiles
+- Fixed critical game loop bug by removing volatile state from dependency array
+- Added playersRef and projectilesRef for continuous interval execution
+- Verified all systems working: cooldowns tick down, projectiles move, damage applies
+
+### Code Quality
+- No LSP errors or type issues
+- Proper dependency arrays to prevent infinite loops
+- Architect-reviewed and approved for production
+- Stable game loops with ref-based state access
 
 ## User Preferences
+- Focus on mobile-first design with landscape orientation
+- Arcade aesthetic with vibrant colors and effects
+- Strategic gameplay with warrior diversity
+- Professional polish and visual feedback
 
-Preferred communication style: Simple, everyday language.
+## How to Play
+1. **Select Your Warrior** - Choose from 6 unique classes
+2. **Enter the Arena** - Battle 9 AI opponents
+3. **Use Your Abilities** - Tap ability buttons to attack
+4. **Collect Shadow Orbs** - Touch pillars to collect orbs
+5. **Win** - Be the last standing or collect the most orbs
 
-## System Architecture
-
-### Mobile Application Framework
-
-**Problem**: Need to build a cross-platform mobile game that runs on iOS and Android with native performance.
-
-**Solution**: React Native with Expo SDK 54, utilizing the new architecture enabled for improved performance.
-
-**Rationale**: 
-- Expo provides managed workflow for easier deployment and updates
-- React Native 0.81.5 with new architecture enabled improves rendering performance critical for games
-- React 19.1.0 with experimental React Compiler for optimized re-renders
-- Cross-platform support reduces development time
-
-**Pros**: Single codebase, rapid iteration, managed builds, extensive library ecosystem
-**Cons**: Some performance overhead vs native, limited access to certain native APIs
-
-### Navigation Architecture
-
-**Problem**: Need stack-based navigation for linear game flow (Home → Matchmaking → Game → GameOver).
-
-**Solution**: React Navigation v7 with native-stack navigator, implementing transparent headers with blur effects.
-
-**Design Pattern**: Stack-only navigation with no tabs or drawer - appropriate for game flow where screens shouldn't be randomly accessible.
-
-**Key Decisions**:
-- Transparent headers with platform-specific blur effects (iOS native blur, Android fallback)
-- Gesture-based navigation disabled during gameplay to prevent accidental exits
-- Centralized screen options with theme-aware styling
-
-### Animation System
-
-**Problem**: Need smooth, performant animations for UI interactions and game elements.
-
-**Solution**: React Native Reanimated v4.1.1 with Worklets for animations running on UI thread.
-
-**Implementation**:
-- Shared values for state that doesn't require React re-renders
-- Spring-based animations for natural feel (buttons, cards)
-- Worklets for gesture handling in joystick component
-- Repeat animations for ambient effects (pulsing orb, loading indicators)
-
-**Pros**: 60 FPS animations, runs on UI thread, declarative API
-**Cons**: Steeper learning curve than Animated API
-
-### Game State Management
-
-**Problem**: Real-time game state updates for player positions, collisions, and game logic.
-
-**Solution**: React hooks with refs for velocity tracking and intervals for game loop.
-
-**Architecture**:
-- `useRef` for high-frequency data (player velocity) to avoid re-renders
-- `useState` for UI-relevant state (player positions, game time, alive count)
-- `setInterval` for game loop (60 FPS target) handling movement, collisions, AI
-- Centralized game logic in `/utils/gameLogic.ts` with pure functions
-
-**Key Components**:
-- Collision detection between players (orb stealing)
-- Distance checking for pillar deposits
-- AI behavior for bot players with state machine (moving to pillar, fleeing, chasing)
-- Game timer with win conditions
-
-### UI Component System
-
-**Problem**: Need consistent, theme-aware components across screens.
-
-**Solution**: Custom themed components with light/dark mode support.
-
-**Component Architecture**:
-- `ThemedView` and `ThemedText`: Base components that consume theme context
-- `Button` and `Card`: Interactive components with spring animations
-- Screen wrappers (`ScreenScrollView`, `ScreenKeyboardAwareScrollView`, `ScreenFlatList`): Handle safe areas and header heights consistently
-- `Joystick`: Custom gesture-based control using pan gestures
-
-**Theme System**:
-- Elevation-based background colors (0-3 levels)
-- Separate game colors for in-game UI vs app UI
-- Platform-specific adaptations (web fallbacks for keyboard awareness)
-
-### Input Handling
-
-**Problem**: Need responsive touch controls for real-time gameplay.
-
-**Solution**: Custom joystick component using React Native Gesture Handler v2.28.
-
-**Implementation**:
-- Pan gesture for continuous movement input
-- Normalized velocity output (-1 to 1 for x/y axes)
-- Visual feedback with animated thumb position
-- Spring animation for thumb return on release
-
-**Design Choice**: Virtual joystick over tilt controls for precision and accessibility.
-
-### Error Boundaries
-
-**Problem**: Need graceful error handling to prevent app crashes.
-
-**Solution**: Class-based ErrorBoundary with custom fallback UI.
-
-**Features**:
-- Development mode: Shows detailed error stack with toggle
-- Production mode: User-friendly error message with restart option
-- App reload functionality via `expo.reloadAppAsync()`
-
-**Note**: Error boundaries must use class components per React lifecycle requirements.
-
-### Screen Layout System
-
-**Problem**: Consistent padding and safe area handling across screens.
-
-**Solution**: Custom `useScreenInsets` hook calculating padding from header height and safe area insets.
-
-**Pattern**: All screen wrapper components consume this hook to apply consistent spacing (headerHeight + Spacing.xl top, safeArea bottom + Spacing.xl).
-
-### Platform Adaptations
-
-**Problem**: Different capabilities across iOS, Android, and web platforms.
-
-**Solution**: Platform-specific implementations with graceful degradation.
-
-**Examples**:
-- Blur effects: iOS native blur, Android solid backgrounds
-- Keyboard handling: Native keyboard controller on mobile, ScrollView fallback on web
-- Gestures: Full gesture support on mobile, limited on web
-
-### Code Organization
-
-**Problem**: Maintain clean architecture as project scales.
-
-**Solution**: Feature-based organization with absolute imports.
-
-**Structure**:
-- `/screens`: Screen components
-- `/components`: Reusable UI components
-- `/navigation`: Navigation configuration
-- `/hooks`: Custom React hooks
-- `/utils`: Pure utility functions (game logic)
-- `/constants`: Theme, spacing, typography constants
-
-**Module Resolution**: Babel module resolver with `@/` alias for clean imports.
-
-## External Dependencies
-
-### Core Framework
-- **Expo SDK 54**: Managed React Native platform with build services
-- **React Native 0.81.5**: Mobile framework with new architecture enabled
-- **React 19.1.0**: UI library with experimental compiler
-
-### Navigation
-- **React Navigation v7**: Native stack navigator for screen transitions
-- **React Navigation Elements**: Header components and utilities
-
-### Animations & Gestures
-- **React Native Reanimated v4.1.1**: UI thread animations with worklets
-- **React Native Gesture Handler v2.28**: Touch gesture recognition
-- **React Native Worklets 0.5.1**: JavaScript worklets for animations
-
-### UI Components
-- **Expo Linear Gradient**: Gradient backgrounds
-- **Expo Blur**: iOS blur effects
-- **Expo Glass Effect**: Platform-specific glass morphism
-- **Expo Symbols**: iOS SF Symbols support
-- **Expo Image**: Optimized image component
-
-### Device APIs
-- **Expo Haptics**: Tactile feedback for game events
-- **React Native Keyboard Controller**: Keyboard-aware views
-- **React Native Safe Area Context**: Safe area insets
-
-### Developer Tools
-- **TypeScript 5.9**: Type safety
-- **ESLint with Expo config**: Code linting
-- **Prettier**: Code formatting
-- **Babel Module Resolver**: Path aliasing
-
-### Future Considerations
-The architecture currently supports local/simulated multiplayer. Real multiplayer would require:
-- WebSocket server for real-time communication
-- Backend API for matchmaking and user accounts
-- Authentication service (Apple Sign-In, Google Sign-In mentioned in design docs)
-- Database for player profiles and match history (design mentions SSO requirement)
+## Next Steps (Optional Enhancements)
+- Implement 3D isometric rendering for enhanced visuals
+- Add detailed progress tracking and leaderboards
+- Create advanced AI with dodging and strategic positioning
+- Add sound effects and music
+- Implement multiplayer support
