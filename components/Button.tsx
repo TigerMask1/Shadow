@@ -13,7 +13,8 @@ import { BorderRadius, Spacing } from "@/constants/theme";
 
 interface ButtonProps {
   onPress?: () => void;
-  children: ReactNode;
+  children?: ReactNode;
+  title?: string;
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
 }
@@ -31,6 +32,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export function Button({
   onPress,
   children,
+  title,
   style,
   disabled = false,
 }: ButtonProps) {
@@ -73,7 +75,7 @@ export function Button({
         type="body"
         style={[styles.buttonText, { color: theme.buttonText }]}
       >
-        {children}
+        {title || children}
       </ThemedText>
     </AnimatedPressable>
   );

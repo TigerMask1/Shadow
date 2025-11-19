@@ -1,31 +1,43 @@
 import { Platform } from "react-native";
 
-const tintColorLight = "#007AFF";
-const tintColorDark = "#0A84FF";
+const tintColorLight = "#9d4edd";
+const tintColorDark = "#c77dff";
 
 export const Colors = {
   light: {
-    text: "#11181C",
+    text: "#1a0f2e",
     buttonText: "#FFFFFF",
     tabIconDefault: "#687076",
     tabIconSelected: tintColorLight,
-    link: "#007AFF",
+    link: "#9d4edd",
     backgroundRoot: "#FFFFFF", // Elevation 0
     backgroundDefault: "#F2F2F2", // Elevation 1
     backgroundSecondary: "#E6E6E6", // Elevation 2
     backgroundTertiary: "#D9D9D9", // Elevation 3
   },
   dark: {
-    text: "#ECEDEE",
+    text: "#e0e1dd",
     buttonText: "#FFFFFF",
     tabIconDefault: "#9BA1A6",
     tabIconSelected: tintColorDark,
-    link: "#0A84FF",
-    backgroundRoot: "#1F2123", // Elevation 0
-    backgroundDefault: "#2A2C2E", // Elevation 1
-    backgroundSecondary: "#353739", // Elevation 2
-    backgroundTertiary: "#404244", // Elevation 3
+    link: "#c77dff",
+    backgroundRoot: "#1a0f2e", // Elevation 0
+    backgroundDefault: "#2a1f3e", // Elevation 1
+    backgroundSecondary: "#3a2f4e", // Elevation 2
+    backgroundTertiary: "#4a3f5e", // Elevation 3
   },
+};
+
+export const GameColors = {
+  background: "#1a0f2e",
+  primaryAccent: "#9d4edd",
+  secondaryAccent: "#4361ee",
+  orbGlow: "#c77dff",
+  success: "#06ffa5",
+  danger: "#ff006e",
+  neutralText: "#e0e1dd",
+  pillarInactive: "#3c3f51",
+  pillarTarget: "#ffd60a",
 };
 
 export const Spacing = {
