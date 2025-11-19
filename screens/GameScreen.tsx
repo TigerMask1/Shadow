@@ -7,24 +7,33 @@ import { ThemedText } from "@/components/ThemedText";
 import { Joystick } from "@/components/Joystick";
 import { MiniMap } from "@/components/MiniMap";
 import { HealthBar } from "@/components/HealthBar";
+import { AttackButton } from "@/components/AttackButton";
 import { Spacing } from "@/constants/theme";
 import { GameColors } from "@/constants/theme";
 import {
   Player,
   Pillar,
   Obstacle,
+  Projectile,
+  DamageNumber,
   createPillars,
   createPlayers,
   createObstacles,
   checkCollision,
   checkObstacleCollision,
   getRandomTargetPillar,
+  createProjectile,
+  updateProjectiles,
+  checkProjectileHit,
+  updateCooldowns,
+  canUseAbility,
   PLAYER_SIZE,
   PILLAR_SIZE,
   COLLISION_DISTANCE,
   DEPOSIT_DISTANCE,
   MAP_WIDTH,
   MAP_HEIGHT,
+  PROJECTILE_SIZE,
 } from "@/utils/gameLogic";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -37,14 +46,28 @@ export default function GameScreen({ navigation, route }: any) {
   const [players, setPlayers] = React.useState<Player[]>([]);
   const [pillars, setPillars] = React.useState<Pillar[]>([]);
   const [obstacles, setObstacles] = React.useState<Obstacle[]>([]);
+  const [projectiles, setProjectiles] = React.useState<Projectile[]>([]);
+  const [damageNumbers, setDamageNumbers] = React.useState<DamageNumber[]>([]);
   const [targetPillarId, setTargetPillarId] = React.useState(0);
   const [timeLeft, setTimeLeft] = React.useState(GAME_DURATION);
   const [alivePlayers, setAlivePlayers] = React.useState(10);
   const [eliminations, setEliminations] = React.useState(0);
   const velocityRef = React.useRef({ x: 0, y: 0 });
   const gameLoopRef = React.useRef<NodeJS.Timeout | null>(null);
+  const cooldownLoopRef = React.useRef<NodeJS.Timeout | null>(null);
+  const projectileLoopRef = React.useRef<NodeJS.Timeout | null>(null);
   const damageTimerRef = React.useRef<{ [key: string]: number }>({});
   const obstaclesRef = React.useRef<Obstacle[]>([]);
+  const playersRef = React.useRef<Player[]>([]);
+  const projectilesRef = React.useRef<Projectile[]>([]);
+
+  React.useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
+  React.useEffect(() => {
+    projectilesRef.current = projectiles;
+  }, [projectiles]);
 
   React.useEffect(() => {
     const newPlayers = createPlayers(selectedWarrior);
@@ -53,6 +76,7 @@ export default function GameScreen({ navigation, route }: any) {
     const initialTargetId = getRandomTargetPillar();
 
     obstaclesRef.current = newObstacles;
+    playersRef.current = newPlayers;
     
     setPlayers(newPlayers);
     setPillars(
@@ -73,8 +97,9 @@ export default function GameScreen({ navigation, route }: any) {
           let newY = player.y;
 
           if (index === 0) {
-            const potentialX = player.x + velocityRef.current.x * 3;
-            const potentialY = player.y + velocityRef.current.y * 3;
+            const speed = player.warrior.stats.moveSpeed;
+            const potentialX = player.x + velocityRef.current.x * speed;
+            const potentialY = player.y + velocityRef.current.y * speed;
 
             if (!checkObstacleCollision(potentialX, player.y, PLAYER_SIZE, obstaclesRef.current)) {
               newX = potentialX;
@@ -93,8 +118,9 @@ export default function GameScreen({ navigation, route }: any) {
               const distance = Math.sqrt(dx * dx + dy * dy);
 
               if (distance > 50) {
-                const potentialX = player.x + (dx / distance) * 1.5;
-                const potentialY = player.y + (dy / distance) * 1.5;
+                const aiSpeed = player.warrior.stats.moveSpeed * 0.8;
+                const potentialX = player.x + (dx / distance) * aiSpeed;
+                const potentialY = player.y + (dy / distance) * aiSpeed;
                 
                 if (!checkObstacleCollision(potentialX, player.y, PLAYER_SIZE, obstaclesRef.current)) {
                   newX = potentialX;
@@ -127,8 +153,101 @@ export default function GameScreen({ navigation, route }: any) {
       });
     }, 1000);
 
+    cooldownLoopRef.current = setInterval(() => {
+      const deltaTime = 0.1;
+      setPlayers((prevPlayers) =>
+        prevPlayers.map((player) => ({
+          ...player,
+          cooldowns: updateCooldowns(player.cooldowns, deltaTime),
+        }))
+      );
+    }, 100);
+
+    projectileLoopRef.current = setInterval(() => {
+      setProjectiles((prevProjectiles) => {
+        const updated = updateProjectiles(prevProjectiles, obstaclesRef.current);
+        
+        const toRemove = new Set<string>();
+        const damageToApply: { playerId: number; damage: number; x: number; y: number }[] = [];
+
+        updated.forEach((projectile) => {
+          const hitResult = checkProjectileHit(projectile, playersRef.current);
+          if (hitResult.hit && hitResult.targetId !== undefined) {
+            toRemove.add(projectile.id);
+            damageToApply.push({
+              playerId: hitResult.targetId,
+              damage: projectile.ability.damage,
+              x: projectile.x,
+              y: projectile.y,
+            });
+          }
+        });
+
+        if (damageToApply.length > 0) {
+          setPlayers((prevPlayers) =>
+            prevPlayers.map((player) => {
+              const damage = damageToApply.find((d) => d.playerId === player.id);
+              if (damage) {
+                const actualDamage = Math.round(damage.damage / player.warrior.stats.defense);
+                const newHealth = Math.max(0, player.health - actualDamage);
+                
+                setDamageNumbers((prev) => [
+                  ...prev,
+                  {
+                    id: `dmg-${Date.now()}-${Math.random()}`,
+                    x: damage.x,
+                    y: damage.y,
+                    damage: actualDamage,
+                    opacity: 1,
+                    offsetY: 0,
+                  },
+                ]);
+
+                if (newHealth <= 0) {
+                  setAlivePlayers((a) => a - 1);
+                  if (player.id === 0) {
+                    setTimeout(() => {
+                      if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+                      if (cooldownLoopRef.current) clearInterval(cooldownLoopRef.current);
+                      if (projectileLoopRef.current) clearInterval(projectileLoopRef.current);
+                      navigation.replace("GameOver", {
+                        result: "eliminated",
+                        survivalTime: GAME_DURATION - timeLeft,
+                        eliminations,
+                      });
+                    }, 100);
+                  } else {
+                    setEliminations((e) => e + 1);
+                  }
+                  return { ...player, health: 0, isDead: true, hasOrb: false };
+                }
+
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                return { ...player, health: newHealth };
+              }
+              return player;
+            })
+          );
+        }
+
+        return updated.filter((p) => !toRemove.has(p.id));
+      });
+
+      setDamageNumbers((prev) =>
+        prev
+          .map((dmg) => ({
+            ...dmg,
+            opacity: dmg.opacity - 0.05,
+            offsetY: dmg.offsetY - 2,
+          }))
+          .filter((dmg) => dmg.opacity > 0)
+      );
+    }, 50);
+
     return () => {
       if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+      if (cooldownLoopRef.current) clearInterval(cooldownLoopRef.current);
+      if (projectileLoopRef.current) clearInterval(projectileLoopRef.current);
       clearInterval(timerInterval);
     };
   }, [navigation, selectedWarrior]);
@@ -182,10 +301,13 @@ export default function GameScreen({ navigation, route }: any) {
           setPlayers((prev) =>
             prev.map((p) => {
               if (p.id === 0) {
-                const newHealth = p.health - 20;
+                const actualDamage = Math.round(10 / p.warrior.stats.defense);
+                const newHealth = p.health - actualDamage;
                 if (newHealth <= 0) {
                   setTimeout(() => {
                     if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+                    if (cooldownLoopRef.current) clearInterval(cooldownLoopRef.current);
+                    if (projectileLoopRef.current) clearInterval(projectileLoopRef.current);
                     navigation.replace("GameOver", {
                       result: "eliminated",
                       survivalTime: GAME_DURATION - timeLeft,
@@ -206,7 +328,8 @@ export default function GameScreen({ navigation, route }: any) {
             const targetPlayer = updatedPlayers[index];
             const localPlayer = updatedPlayers[0];
             
-            const newHealth = targetPlayer.health - 20;
+            const actualDamage = Math.round(10 / targetPlayer.warrior.stats.defense);
+            const newHealth = targetPlayer.health - actualDamage;
             if (newHealth <= 0) {
               setAlivePlayers((a) => a - 1);
               setEliminations((e) => e + 1);
@@ -233,6 +356,82 @@ export default function GameScreen({ navigation, route }: any) {
 
   const handleJoystickMove = (x: number, y: number) => {
     velocityRef.current = { x, y };
+  };
+
+  const handleAbilityUse = (abilityIndex: number) => {
+    if (!player || player.isDead) return;
+
+    const ability = player.warrior.abilities[abilityIndex];
+    if (!canUseAbility(player, ability)) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (ability.type === 'projectile') {
+      const nearestEnemy = players
+        .filter((p) => p.id !== 0 && !p.isDead)
+        .sort((a, b) => {
+          const distA = Math.sqrt((a.x - player.x) ** 2 + (a.y - player.y) ** 2);
+          const distB = Math.sqrt((b.x - player.x) ** 2 + (b.y - player.y) ** 2);
+          return distA - distB;
+        })[0];
+
+      if (nearestEnemy) {
+        const projectile = createProjectile(player, ability, nearestEnemy.x, nearestEnemy.y);
+        if (projectile) {
+          setProjectiles((prev) => [...prev, projectile]);
+        }
+      }
+    } else if (ability.type === 'melee' || ability.type === 'aoe') {
+      const hitPlayers = players.filter(
+        (p) =>
+          p.id !== 0 &&
+          !p.isDead &&
+          checkCollision(player.x, player.y, p.x, p.y, ability.range)
+      );
+
+      hitPlayers.forEach((target) => {
+        const actualDamage = Math.round(ability.damage / target.warrior.stats.defense);
+        const newHealth = Math.max(0, target.health - actualDamage);
+
+        setDamageNumbers((prev) => [
+          ...prev,
+          {
+            id: `dmg-${Date.now()}-${Math.random()}`,
+            x: target.x,
+            y: target.y,
+            damage: actualDamage,
+            opacity: 1,
+            offsetY: 0,
+          },
+        ]);
+
+        setPlayers((prev) =>
+          prev.map((p) => {
+            if (p.id === target.id) {
+              if (newHealth <= 0) {
+                setAlivePlayers((a) => a - 1);
+                setEliminations((e) => e + 1);
+                return { ...p, health: 0, isDead: true };
+              }
+              return { ...p, health: newHealth };
+            }
+            return p;
+          })
+        );
+      });
+    }
+
+    setPlayers((prev) =>
+      prev.map((p) => {
+        if (p.id === 0) {
+          return {
+            ...p,
+            cooldowns: { ...p.cooldowns, [ability.id]: ability.cooldown },
+          };
+        }
+        return p;
+      })
+    );
   };
 
   const formatTime = (seconds: number) => {
@@ -283,6 +482,35 @@ export default function GameScreen({ navigation, route }: any) {
                 },
               ]}
             />
+          ))}
+
+          {projectiles.map((projectile) => (
+            <View
+              key={projectile.id}
+              style={[
+                styles.projectile,
+                {
+                  left: projectile.x - PROJECTILE_SIZE / 2,
+                  top: projectile.y - PROJECTILE_SIZE / 2,
+                  backgroundColor: projectile.ability.color,
+                  shadowColor: projectile.ability.color,
+                },
+              ]}
+            />
+          ))}
+
+          {damageNumbers.map((dmg) => (
+            <View
+              key={dmg.id}
+              style={{
+                position: "absolute",
+                left: dmg.x,
+                top: dmg.y + dmg.offsetY,
+                opacity: dmg.opacity,
+              }}
+            >
+              <ThemedText style={styles.damageNumber}>-{dmg.damage}</ThemedText>
+            </View>
           ))}
 
           {players.map((p) =>
@@ -349,12 +577,26 @@ export default function GameScreen({ navigation, route }: any) {
             <View
               style={[
                 styles.orbIndicator,
-                { right: Spacing["2xl"], bottom: Spacing["2xl"] },
+                { right: Spacing["2xl"], top: Spacing["2xl"] },
               ]}
             >
               <ThemedText style={styles.orbText}>Pillar {targetPillarId + 1}</ThemedText>
             </View>
           ) : null}
+
+          {player && (
+            <View style={[styles.attackButtons, { right: Spacing["2xl"], bottom: Spacing["2xl"] }]}>
+              {player.warrior.abilities.map((ability, index) => (
+                <AttackButton
+                  key={ability.id}
+                  ability={ability}
+                  onPress={() => handleAbilityUse(index)}
+                  cooldown={player.cooldowns[ability.id] || 0}
+                  index={index}
+                />
+              ))}
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -395,6 +637,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 8,
     elevation: 3,
+  },
+  projectile: {
+    position: "absolute",
+    width: PROJECTILE_SIZE,
+    height: PROJECTILE_SIZE,
+    borderRadius: PROJECTILE_SIZE / 2,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  damageNumber: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#FF0000",
+    textShadowColor: "#FFFFFF",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
   },
   hud: {
     position: "absolute",
@@ -459,5 +719,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     marginBottom: Spacing.xs,
+  },
+  attackButtons: {
+    position: "absolute",
+    flexDirection: "row",
+    gap: Spacing.sm,
   },
 });
