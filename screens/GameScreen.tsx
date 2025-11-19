@@ -31,8 +31,9 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const GAME_DURATION = 60;
 
-export default function GameScreen({ navigation }: any) {
+export default function GameScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
+  const { selectedWarrior } = route.params || {};
   const [players, setPlayers] = React.useState<Player[]>([]);
   const [pillars, setPillars] = React.useState<Pillar[]>([]);
   const [obstacles, setObstacles] = React.useState<Obstacle[]>([]);
@@ -46,7 +47,7 @@ export default function GameScreen({ navigation }: any) {
   const obstaclesRef = React.useRef<Obstacle[]>([]);
 
   React.useEffect(() => {
-    const newPlayers = createPlayers();
+    const newPlayers = createPlayers(selectedWarrior);
     const newPillars = createPillars();
     const newObstacles = createObstacles();
     const initialTargetId = getRandomTargetPillar();
@@ -130,7 +131,7 @@ export default function GameScreen({ navigation }: any) {
       if (gameLoopRef.current) clearInterval(gameLoopRef.current);
       clearInterval(timerInterval);
     };
-  }, [navigation]);
+  }, [navigation, selectedWarrior]);
 
   React.useEffect(() => {
     const player = players[0];

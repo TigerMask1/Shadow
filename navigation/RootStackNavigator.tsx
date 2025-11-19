@@ -1,17 +1,20 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "@/screens/HomeScreen";
+import WarriorSelectScreen from "@/screens/WarriorSelectScreen";
 import MatchmakingScreen from "@/screens/MatchmakingScreen";
 import GameScreen from "@/screens/GameScreen";
 import GameOverScreen from "@/screens/GameOverScreen";
 import { HeaderTitle } from "@/components/HeaderTitle";
 import { useTheme } from "@/hooks/useTheme";
 import { getCommonScreenOptions } from "@/navigation/screenOptions";
+import { WarriorClass } from "@/utils/warriors";
 
 export type RootStackParamList = {
   Home: undefined;
-  Matchmaking: undefined;
-  Game: undefined;
+  WarriorSelect: undefined;
+  Matchmaking: { selectedWarrior: WarriorClass };
+  Game: { selectedWarrior: WarriorClass };
   GameOver: {
     result: "deposit" | "elimination" | "eliminated";
     survivalTime: number;
@@ -35,6 +38,15 @@ export default function RootStackNavigator() {
         component={HomeScreen}
         options={{
           headerTitle: () => <HeaderTitle title="Shadow Orb" />,
+          headerTransparent: true,
+          headerBlurEffect: "dark",
+        }}
+      />
+      <Stack.Screen
+        name="WarriorSelect"
+        component={WarriorSelectScreen}
+        options={{
+          headerTitle: "Select Warrior",
           headerTransparent: true,
           headerBlurEffect: "dark",
         }}

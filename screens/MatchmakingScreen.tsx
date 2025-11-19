@@ -14,9 +14,10 @@ import Spacer from "@/components/Spacer";
 import { Spacing } from "@/constants/theme";
 import { GameColors } from "@/constants/theme";
 
-export default function MatchmakingScreen({ navigation }: any) {
+export default function MatchmakingScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const [playerCount, setPlayerCount] = React.useState(1);
+  const { selectedWarrior } = route.params || {};
 
   const opacity = useSharedValue(0.5);
 
@@ -33,7 +34,7 @@ export default function MatchmakingScreen({ navigation }: any) {
       setPlayerCount((prev) => {
         if (prev >= 10) {
           clearInterval(timer);
-          setTimeout(() => navigation.replace("Game"), 500);
+          setTimeout(() => navigation.replace("Game", { selectedWarrior }), 500);
           return 10;
         }
         return prev + 1;
@@ -41,7 +42,7 @@ export default function MatchmakingScreen({ navigation }: any) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [navigation]);
+  }, [navigation, selectedWarrior]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
