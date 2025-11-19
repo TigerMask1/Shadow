@@ -5,6 +5,8 @@ export interface Player {
   hasOrb: boolean;
   isDead: boolean;
   color: string;
+  health: number;
+  maxHealth: number;
 }
 
 export interface Pillar {
@@ -12,6 +14,15 @@ export interface Pillar {
   x: number;
   y: number;
   isTarget: boolean;
+}
+
+export interface Obstacle {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  type: "rock" | "wall";
 }
 
 export const PLAYER_SIZE = 30;
@@ -68,6 +79,8 @@ export function createPlayers(): Player[] {
       hasOrb: i === 0,
       isDead: false,
       color: PLAYER_COLORS[i],
+      health: 100,
+      maxHealth: 100,
     });
   }
 
@@ -92,4 +105,59 @@ export function getRandomTargetPillar(excludeId?: number): number {
     pillarId = Math.floor(Math.random() * 8);
   }
   return pillarId;
+}
+
+export function createObstacles(): Obstacle[] {
+  const obstacles: Obstacle[] = [];
+  const centerX = MAP_WIDTH / 2;
+  const centerY = MAP_HEIGHT / 2;
+
+  const obstaclePositions = [
+    { x: centerX + 200, y: centerY, width: 60, height: 15, type: "wall" as const },
+    { x: centerX - 200, y: centerY, width: 60, height: 15, type: "wall" as const },
+    { x: centerX, y: centerY + 200, width: 15, height: 60, type: "wall" as const },
+    { x: centerX, y: centerY - 200, width: 15, height: 60, type: "wall" as const },
+    { x: centerX + 150, y: centerY + 150, width: 40, height: 40, type: "rock" as const },
+    { x: centerX - 150, y: centerY + 150, width: 40, height: 40, type: "rock" as const },
+    { x: centerX + 150, y: centerY - 150, width: 40, height: 40, type: "rock" as const },
+    { x: centerX - 150, y: centerY - 150, width: 40, height: 40, type: "rock" as const },
+  ];
+
+  obstaclePositions.forEach((pos, index) => {
+    obstacles.push({
+      id: index,
+      ...pos,
+    });
+  });
+
+  return obstacles;
+}
+
+export function checkObstacleCollision(
+  x: number,
+  y: number,
+  size: number,
+  obstacles: Obstacle[]
+): boolean {
+  for (const obstacle of obstacles) {
+    const playerLeft = x - size / 2;
+    const playerRight = x + size / 2;
+    const playerTop = y - size / 2;
+    const playerBottom = y + size / 2;
+
+    const obsLeft = obstacle.x - obstacle.width / 2;
+    const obsRight = obstacle.x + obstacle.width / 2;
+    const obsTop = obstacle.y - obstacle.height / 2;
+    const obsBottom = obstacle.y + obstacle.height / 2;
+
+    if (
+      playerRight > obsLeft &&
+      playerLeft < obsRight &&
+      playerBottom > obsTop &&
+      playerTop < obsBottom
+    ) {
+      return true;
+    }
+  }
+  return false;
 }

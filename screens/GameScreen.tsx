@@ -5,14 +5,19 @@ import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
 import { Joystick } from "@/components/Joystick";
+import { MiniMap } from "@/components/MiniMap";
+import { HealthBar } from "@/components/HealthBar";
 import { Spacing } from "@/constants/theme";
 import { GameColors } from "@/constants/theme";
 import {
   Player,
   Pillar,
+  Obstacle,
   createPillars,
   createPlayers,
+  createObstacles,
   checkCollision,
+  checkObstacleCollision,
   getRandomTargetPillar,
   PLAYER_SIZE,
   PILLAR_SIZE,
@@ -24,23 +29,30 @@ import {
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SCREEN_HEIGHT = Dimensions.get("window").height;
-const GAME_DURATION = 600;
+const GAME_DURATION = 60;
 
 export default function GameScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [players, setPlayers] = React.useState<Player[]>([]);
   const [pillars, setPillars] = React.useState<Pillar[]>([]);
+  const [obstacles, setObstacles] = React.useState<Obstacle[]>([]);
   const [targetPillarId, setTargetPillarId] = React.useState(0);
   const [timeLeft, setTimeLeft] = React.useState(GAME_DURATION);
   const [alivePlayers, setAlivePlayers] = React.useState(10);
+  const [eliminations, setEliminations] = React.useState(0);
   const velocityRef = React.useRef({ x: 0, y: 0 });
   const gameLoopRef = React.useRef<NodeJS.Timeout | null>(null);
+  const damageTimerRef = React.useRef<{ [key: string]: number }>({});
+  const obstaclesRef = React.useRef<Obstacle[]>([]);
 
   React.useEffect(() => {
     const newPlayers = createPlayers();
     const newPillars = createPillars();
+    const newObstacles = createObstacles();
     const initialTargetId = getRandomTargetPillar();
 
+    obstaclesRef.current = newObstacles;
+    
     setPlayers(newPlayers);
     setPillars(
       newPillars.map((p) => ({
@@ -48,6 +60,7 @@ export default function GameScreen({ navigation }: any) {
         isTarget: p.id === initialTargetId,
       }))
     );
+    setObstacles(newObstacles);
     setTargetPillarId(initialTargetId);
 
     gameLoopRef.current = setInterval(() => {
@@ -59,8 +72,15 @@ export default function GameScreen({ navigation }: any) {
           let newY = player.y;
 
           if (index === 0) {
-            newX += velocityRef.current.x * 3;
-            newY += velocityRef.current.y * 3;
+            const potentialX = player.x + velocityRef.current.x * 3;
+            const potentialY = player.y + velocityRef.current.y * 3;
+
+            if (!checkObstacleCollision(potentialX, player.y, PLAYER_SIZE, obstaclesRef.current)) {
+              newX = potentialX;
+            }
+            if (!checkObstacleCollision(player.x, potentialY, PLAYER_SIZE, obstaclesRef.current)) {
+              newY = potentialY;
+            }
 
             newX = Math.max(PLAYER_SIZE, Math.min(MAP_WIDTH - PLAYER_SIZE, newX));
             newY = Math.max(PLAYER_SIZE, Math.min(MAP_HEIGHT - PLAYER_SIZE, newY));
@@ -72,8 +92,15 @@ export default function GameScreen({ navigation }: any) {
               const distance = Math.sqrt(dx * dx + dy * dy);
 
               if (distance > 50) {
-                newX += (dx / distance) * 1.5;
-                newY += (dy / distance) * 1.5;
+                const potentialX = player.x + (dx / distance) * 1.5;
+                const potentialY = player.y + (dy / distance) * 1.5;
+                
+                if (!checkObstacleCollision(potentialX, player.y, PLAYER_SIZE, obstaclesRef.current)) {
+                  newX = potentialX;
+                }
+                if (!checkObstacleCollision(player.x, potentialY, PLAYER_SIZE, obstaclesRef.current)) {
+                  newY = potentialY;
+                }
               }
             }
           }
@@ -141,30 +168,63 @@ export default function GameScreen({ navigation }: any) {
         !otherPlayer.isDead &&
         checkCollision(player.x, player.y, otherPlayer.x, otherPlayer.y, COLLISION_DISTANCE)
       ) {
+        const now = Date.now();
+        const damageKey = player.hasOrb ? `player-${index}` : `orb-${index}`;
+        const lastDamage = damageTimerRef.current[damageKey] || 0;
+        
+        if (now - lastDamage < 500) return;
+        
+        damageTimerRef.current[damageKey] = now;
+
         if (player.hasOrb) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          if (gameLoopRef.current) clearInterval(gameLoopRef.current);
-          navigation.replace("GameOver", {
-            result: "eliminated",
-            survivalTime: GAME_DURATION - timeLeft,
-            eliminations: 10 - alivePlayers,
-          });
-        } else if (otherPlayer.hasOrb) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           setPlayers((prev) =>
             prev.map((p) => {
-              if (p.id === index) return { ...p, isDead: true, hasOrb: false };
-              if (p.id === 0) return { ...p, hasOrb: true };
+              if (p.id === 0) {
+                const newHealth = p.health - 20;
+                if (newHealth <= 0) {
+                  setTimeout(() => {
+                    if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+                    navigation.replace("GameOver", {
+                      result: "eliminated",
+                      survivalTime: GAME_DURATION - timeLeft,
+                      eliminations,
+                    });
+                  }, 100);
+                  return { ...p, health: 0, isDead: true, hasOrb: false };
+                }
+                return { ...p, health: newHealth };
+              }
               return p;
             })
           );
-          setAlivePlayers((prev) => prev - 1);
-
-          const newTargetId = getRandomTargetPillar(targetPillarId);
-          setTargetPillarId(newTargetId);
-          setPillars((prev) =>
-            prev.map((p) => ({ ...p, isTarget: p.id === newTargetId }))
-          );
+        } else if (otherPlayer.hasOrb) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          setPlayers((prev) => {
+            const updatedPlayers = prev.map((p) => ({ ...p }));
+            const targetPlayer = updatedPlayers[index];
+            const localPlayer = updatedPlayers[0];
+            
+            const newHealth = targetPlayer.health - 20;
+            if (newHealth <= 0) {
+              setAlivePlayers((a) => a - 1);
+              setEliminations((e) => e + 1);
+              const newTargetId = getRandomTargetPillar(targetPillarId);
+              setTargetPillarId(newTargetId);
+              setPillars((prevPillars) =>
+                prevPillars.map((pillar) => ({ ...pillar, isTarget: pillar.id === newTargetId }))
+              );
+              
+              targetPlayer.health = 0;
+              targetPlayer.isDead = true;
+              targetPlayer.hasOrb = false;
+              localPlayer.hasOrb = true;
+            } else {
+              targetPlayer.health = newHealth;
+            }
+            
+            return updatedPlayers;
+          });
         }
       }
     });
@@ -188,6 +248,23 @@ export default function GameScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: GameColors.background }]}>
       <View style={[styles.mapContainer, { transform: [{ translateX: cameraX }, { translateY: cameraY }] }]}>
         <View style={[styles.map, { width: MAP_WIDTH, height: MAP_HEIGHT }]}>
+          {obstacles.map((obstacle) => (
+            <View
+              key={`obstacle-${obstacle.id}`}
+              style={[
+                styles.obstacle,
+                {
+                  left: obstacle.x - obstacle.width / 2,
+                  top: obstacle.y - obstacle.height / 2,
+                  width: obstacle.width,
+                  height: obstacle.height,
+                  backgroundColor: obstacle.type === "rock" ? "#5a5a5a" : "#3a3a3a",
+                  borderRadius: obstacle.type === "rock" ? obstacle.width / 4 : 2,
+                },
+              ]}
+            />
+          ))}
+
           {pillars.map((pillar) => (
             <View
               key={pillar.id}
@@ -211,18 +288,26 @@ export default function GameScreen({ navigation }: any) {
             p.isDead ? null : (
               <View
                 key={p.id}
-                style={[
-                  styles.player,
-                  {
-                    left: p.x - PLAYER_SIZE / 2,
-                    top: p.y - PLAYER_SIZE / 2,
-                    backgroundColor: p.color,
-                    borderColor: p.hasOrb ? GameColors.orbGlow : "transparent",
-                    borderWidth: p.hasOrb ? 4 : 0,
-                    shadowColor: p.hasOrb ? GameColors.orbGlow : p.color,
-                  },
-                ]}
-              />
+                style={{
+                  position: "absolute",
+                  left: p.x - PLAYER_SIZE / 2,
+                  top: p.y - PLAYER_SIZE / 2 - 8,
+                }}
+              >
+                <HealthBar health={p.health} maxHealth={p.maxHealth} width={PLAYER_SIZE} height={3} />
+                <View
+                  style={[
+                    styles.player,
+                    {
+                      backgroundColor: p.color,
+                      borderColor: p.hasOrb ? GameColors.orbGlow : "transparent",
+                      borderWidth: p.hasOrb ? 4 : 0,
+                      shadowColor: p.hasOrb ? GameColors.orbGlow : p.color,
+                      marginTop: 2,
+                    },
+                  ]}
+                />
+              </View>
             )
           )}
         </View>
@@ -241,6 +326,9 @@ export default function GameScreen({ navigation }: any) {
           <View style={styles.hudItem}>
             <ThemedText style={styles.hudText}>{formatTime(timeLeft)}</ThemedText>
           </View>
+          <View style={styles.miniMapContainer}>
+            <MiniMap players={players} pillars={pillars} size={100} />
+          </View>
           <View style={styles.hudItem}>
             <ThemedText style={styles.hudText}>{alivePlayers} alive</ThemedText>
           </View>
@@ -249,6 +337,11 @@ export default function GameScreen({ navigation }: any) {
         <View style={styles.hudBottom}>
           <View style={[styles.joystickContainer, { left: Spacing["2xl"] }]}>
             <Joystick onMove={handleJoystickMove} />
+          </View>
+
+          <View style={[styles.playerHealthContainer, { left: Spacing["2xl"], bottom: Spacing["2xl"] + 150 }]}>
+            <ThemedText style={styles.healthLabel}>Health</ThemedText>
+            {player ? <HealthBar health={player.health} maxHealth={player.maxHealth} width={80} height={8} /> : null}
           </View>
 
           {player?.hasOrb ? (
@@ -276,6 +369,11 @@ const styles = StyleSheet.create({
   },
   map: {
     backgroundColor: GameColors.background + "40",
+  },
+  obstacle: {
+    position: "absolute",
+    borderWidth: 1,
+    borderColor: "#666666",
   },
   pillar: {
     position: "absolute",
@@ -308,7 +406,11 @@ const styles = StyleSheet.create({
   hudTop: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
     paddingHorizontal: Spacing["2xl"],
+  },
+  miniMapContainer: {
+    marginTop: -Spacing.xs,
   },
   hudItem: {
     backgroundColor: GameColors.background + "E6",
@@ -343,5 +445,18 @@ const styles = StyleSheet.create({
     color: GameColors.background,
     fontSize: 16,
     fontWeight: "700",
+  },
+  playerHealthContainer: {
+    position: "absolute",
+    backgroundColor: GameColors.background + "E6",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 8,
+  },
+  healthLabel: {
+    color: GameColors.neutralText,
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: Spacing.xs,
   },
 });
